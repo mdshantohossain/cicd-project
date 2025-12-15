@@ -61,6 +61,13 @@ jobs:
           target: "/home/lookmart/test.lookmartbd.com"
           rm: false # keep existing files not overwritten by source
 
+      - name: Debug SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 lookmart@161.248.188.190 "whoami"
+
       # 8️⃣ Run post-deploy Artisan commands
       - name: Post-deploy commands
         uses: appleboy/ssh-action@v1.0.3
