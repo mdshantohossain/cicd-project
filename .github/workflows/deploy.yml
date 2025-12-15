@@ -29,9 +29,9 @@ jobs:
       - name: Deploy to FTP server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USER }}
-          password: ${{ secrets.FTP_PASS }}
+          server: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_KEY }}
           port: 21
           protocol: ftp
           local-dir: ./
@@ -41,3 +41,23 @@ jobs:
             **/.github/**
             **/node_modules/**
             **/tests/**
+
+            # 8️⃣ Run post-deploy Artisan commands
+      - name: Post-deploy commands
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /home/lookmart/admin.lookmartbd.com
+            php artisan migrate:fresh --seed --force
+            php artisan config:clear
+            php artisan config:cache
+            php artisan cache:clear
+            php artisan route:clear
+            php artisan route:cache
+            php artisan event:clear
+            php artisan event:cache
+            php artisan view:clear
+            php artisan view:cache
