@@ -1,4 +1,4 @@
-name: Laravel CI/CD
+name: Laravel CI/CD Test Project
 
 on:
   push:
@@ -69,7 +69,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd /home/lookmart/admin.lookmartbd.com
+            cd /home/lookmart/test.lookmartbd.com
             php artisan migrate:fresh --seed --force
             php artisan config:clear
             php artisan config:cache
