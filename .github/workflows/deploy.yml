@@ -1,4 +1,4 @@
-name: Laravel FTP Deploy
+name: Laravel CI/CD
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,30 +19,49 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
+          extensions: mbstring, pdo, mysql
           tools: composer:v2
 
-      # 3️⃣ Install Composer dependencies
+      # 3️⃣ Cache Composer dependencies to speed up builds
+      - name: Cache Composer
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      # 4️⃣ Prepare Laravel directories
+      - name: Prepare Laravel directories
+        run: |
+          mkdir -p bootstrap/cache
+          mkdir -p storage/framework/{cache,sessions,views}
+          touch bootstrap/cache/packages.php
+          touch bootstrap/cache/services.php
+          chmod -R 775 bootstrap/cache storage
+
+      # 5️⃣ Install Composer dependencies
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
-      # 4️⃣ Deploy via FTP
-      - name: Deploy to FTP server
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          server: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          password: ${{ secrets.SSH_KEY }}
-          port: 21
-          protocol: ftp
-          local-dir: ./
-          server-dir: /home/lookmart/test.lookmartbd.com/
-          exclude: |
-            **/.git*
-            **/.github/**
-            **/node_modules/**
-            **/tests/**
+      # 6️⃣ Optional: Run tests
+      - name: Run Tests
+        run: php artisan test
+        continue-on-error: true
 
-            # 8️⃣ Run post-deploy Artisan commands
+      # 7️⃣ Deploy via SFTP to subdomain folder
+      - name: Deploy via SFTP
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          source: "."
+          target: "/home/lookmart/test.lookmartbd.com"
+          rm: false # keep existing files not overwritten by source
+
+      # 8️⃣ Run post-deploy Artisan commands
       - name: Post-deploy commands
         uses: appleboy/ssh-action@v1.0.3
         with:
